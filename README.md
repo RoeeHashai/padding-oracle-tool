@@ -1,6 +1,6 @@
 # Padding Oracle Attack Tool
 
-A command-line tool that demonstrates the **CBC Padding Oracle Attack** against DES-encrypted ciphertext.
+A command-line tool that demonstrates the **CBC Padding Oracle Attack** against DES-CBC or AES-CBC encrypted ciphertext.
 
 ## What is a Padding Oracle Attack?
 
@@ -19,32 +19,51 @@ pip install -r requirements.txt
 ## Usage
 
 ```
-usage: padding_oracle [-h] --ciphertext HEX --iv HEX --key FILE|HEX [--verbose] [--raw]
+usage: padding_oracle [-h] (--ciphertext HEX | --plaintext TEXT | --plaintext-hex HEX)
+                      [--cipher {des,aes}] [--iv HEX] --key FILE|HEX [--verbose] [--raw]
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--ciphertext`, `-c` | Hex-encoded ciphertext (must be a multiple of 8 bytes) |
-| `--iv`, `-i` | Hex-encoded IV (exactly 8 bytes) |
-| `--key`, `-k` | DES key — path to a raw key file **or** a 16-char hex string |
-| `--verbose`, `-v` | Print per-byte progress |
+| `--ciphertext`, `-c` | Hex-encoded ciphertext to attack |
+| `--plaintext`, `-p` | UTF-8 plaintext to encrypt then attack (full demo) |
+| `--plaintext-hex` | Hex-encoded plaintext bytes to encrypt then attack |
+| `--cipher` | Block cipher: `des` (default) or `aes` |
+| `--iv`, `-i` | Hex-encoded IV. Required with `--ciphertext`; random if omitted in plaintext modes |
+| `--key`, `-k` | Cipher key — path to a raw key file **or** a hex string of the correct length |
+| `--verbose`, `-v` | Print per-byte progress and live oracle call count |
 | `--raw` | Write raw decrypted bytes to stdout |
+
+### Key sizes
+
+| Cipher | Block size | Key size |
+|--------|-----------|----------|
+| DES | 8 bytes | 8 bytes (16 hex chars) |
+| AES | 16 bytes | 16 / 24 / 32 bytes |
 
 ### Examples
 
 ```bash
-# Key from file, silent output
+# Attack a known DES ciphertext
 python padding_oracle.py \
-  --ciphertext c0ffeedead1234ab8877665544332211 \
+  --ciphertext c0ffeedead1234ab \
   --iv 0000000000000000 \
   --key key.txt
 
-# Key as hex (706f61697366756e == "poaisfun")
+# Encrypt plaintext with DES then attack it (full demo)
+python padding_oracle.py --plaintext 'hello world' --key key.txt --verbose
+
+# Same but with AES
+python padding_oracle.py --plaintext 'hello world' --key aes_key.txt --cipher aes --verbose
+
+# Binary plaintext via hex
+python padding_oracle.py --plaintext-hex 48656c6c6f --key key.txt
+
+# Key as hex string instead of file (DES: 8 bytes = 16 hex chars)
 python padding_oracle.py \
-  --ciphertext c0ffeedead1234ab8877665544332211 \
+  --ciphertext c0ffeedead1234ab \
   --iv 0000000000000000 \
-  --key 706f61697366756e \
-  --verbose
+  --key 706f61697366756e
 ```
 
 ## How it works
@@ -68,5 +87,4 @@ Complexity: at most `256 × block_size × num_blocks` oracle queries.
 | File | Purpose |
 |------|---------|
 | `padding_oracle.py` | Main CLI tool (oracle + attack) |
-| `oracle.py` | Standalone oracle script (original class exercise) |
 | `requirements.txt` | Python dependencies |
